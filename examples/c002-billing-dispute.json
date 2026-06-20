@@ -1,0 +1,51 @@
+{
+  "callId": "c002",
+  "agentName": "Marcus",
+  "duration": 180,
+  "turns": [
+    {
+      "speaker": "agent",
+      "text": "Good afternoon, you've reached billing support. My name is Marcus, how can I help you today?",
+      "t": 0
+    },
+    {
+      "speaker": "customer",
+      "text": "I just got my bill and the charges are absolutely ridiculous. I've been overcharged by two hundred dollars and I want it fixed right now.",
+      "t": 8
+    },
+    {
+      "speaker": "agent",
+      "text": "I'm sorry to hear that. Let me pull up your account right away and take a look at those charges for you."
+    },
+    {
+      "speaker": "customer",
+      "text": "This is the third time this has happened. I want a full refund immediately. I'm sick of calling in about the same issue.",
+      "t": 30
+    },
+    {
+      "speaker": "agent",
+      "text": "I apologise for the repeated billing errors. That is not the experience we want for you at all. I can see on my screen that you were indeed overcharged by two hundred dollars. I've processed a full refund which will appear on your account within three to five business days. I've also added a twenty dollar credit for the inconvenience and flagged your account for a billing audit so this doesn't happen again.",
+      "t": 48
+    },
+    {
+      "speaker": "customer",
+      "text": "Fine. Just make sure it actually gets fixed this time.",
+      "t": 65
+    },
+    {
+      "speaker": "agent",
+      "text": "Absolutely. I've made a note on your account and our billing team will review it within forty-eight hours. You'll receive an email confirmation of the refund shortly.",
+      "t": 71
+    },
+    {
+      "speaker": "customer",
+      "text": "Okay. Thank you for actually sorting it out.",
+      "t": 82
+    },
+    {
+      "speaker": "agent",
+      "text": "Thank you for your patience, and I'm sorry again for the trouble. Is there anything else I can help you with today?",
+      "t": 87
+    }
+  ]
+}

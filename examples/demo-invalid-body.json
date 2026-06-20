@@ -1,0 +1,7 @@
+{
+  "_comment": "Intentionally invalid: duration must be a number (seconds), not a string. Upload this to demonstrate the error state in the UI.",
+  "callId": "demo-invalid",
+  "agentName": "Test Agent",
+  "duration": "not-a-number",
+  "turns": []
+}

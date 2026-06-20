@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 247 21% 9%;
+    --foreground: 0 0% 100%;
+    --card: 233 22% 14%;
+    --card-foreground: 0 0% 100%;
+    --primary: 62 91% 60%;
+    --primary-foreground: 247 21% 9%;
+    --secondary: 233 22% 18%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 233 22% 14%;
+    --muted-foreground: 240 1% 71%;
+    --accent: 233 22% 18%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 357 97% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 233 22% 20%;
+    --input: 233 22% 14%;
+    --ring: 62 91% 60%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-w-border;
+  }
+
+  body {
+    @apply bg-w-bg text-w-text font-inter antialiased;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #1b1d2a transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #1b1d2a;
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #252738;
+  }
+}
+
+/* Equalizer audio wave animation for the active TTS speaker */
+@keyframes wave-play {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
+}
+
+.animate-wave-1 { animation: wave-play 0.6s ease-in-out infinite alternate; }
+.animate-wave-2 { animation: wave-play 0.6s ease-in-out infinite alternate 0.2s; }
+.animate-wave-3 { animation: wave-play 0.6s ease-in-out infinite alternate 0.4s; }
+
+/* Grid background pattern for the waveform audio player track */
+.bg-grid-pattern {
+  background-size: 8px 8px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* ── Print Media Styles for PDF Export ── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+  }
+
+  /* Hide elements that shouldn't be printed */
+  header,
+  nav,
+  button,
+  .flex-shrink-0, /* Player controls, sidebars */
+  #timeline,
+  .MuiButton-root,
+  input,
+  .bg-grid-pattern,
+  .scrollbar-thin::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Hide detail timeline, audio waveform, and side diagnostic panel */
+  div[class*="ConversationWaveform"],
+  div[class*="MomentTimeline"],
+  div[class*="w-[320px]"] {
+    display: none !important;
+  }
+
+  /* Expand the transcript block to full width */
+  div[class*="flex-1 overflow-y-auto"] {
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* Re-style detail body wrapper to print page scale */
+  div[class*="h-[calc(100vh-52px)]"] {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Re-style container */
+  div[class*="max-w-4xl"] {
+    max-w: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Styled Print Report Header */
+  .bg-\[\#10131c\] {
+    background: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    color: black !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    margin-bottom: 30px !important;
+  }
+
+  .bg-\[\#10131c\] h1 {
+    color: black !important;
+  }
+
+  .bg-\[\#10131c\] span {
+    color: #495057 !important;
+  }
+
+  /* Transcript items printable format */
+  div[id^="turn-"] {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #dee2e6 !important;
+    border-left: 4px solid #adb5bd !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 12px !important;
+    padding: 12px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 15px !important;
+  }
+
+  /* Ensure colors print cleanly */
+  div[class*="border-l-w-red"] { border-left-color: #fc535b !important; background: #fff5f5 !important; }
+  div[class*="border-l-w-green"] { border-left-color: #1D9E75 !important; background: #f4fbf7 !important; }
+  div[class*="border-l-w-orange"] { border-left-color: #fabc2d !important; background: #fffdf5 !important; }
+  div[class*="border-l-w-blue"] { border-left-color: #1378d1 !important; background: #f5faff !important; }
+
+  span[class*="bg-w-red"] { background: #fc535b !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  span[class*="bg-w-green"] { background: #1D9E75 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  span[class*="bg-w-orange"] { background: #fabc2d !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  span[class*="bg-w-blue"] { background: #1378d1 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  p[class*="text-w-muted"] {
+    color: #333333 !important;
+  }
+}

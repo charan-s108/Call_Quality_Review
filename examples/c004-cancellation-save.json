@@ -1,0 +1,52 @@
+{
+  "callId": "c004",
+  "agentName": "Rachel",
+  "duration": 200,
+  "turns": [
+    {
+      "speaker": "agent",
+      "text": "Thank you for calling customer retention, my name is Rachel. How can I help you today?",
+      "t": 0
+    },
+    {
+      "speaker": "customer",
+      "text": "I've had enough of this service. I want to cancel my subscription immediately. The app crashes every single day and I can't justify paying for it anymore.",
+      "t": 7
+    },
+    {
+      "speaker": "agent",
+      "text": "I'm sorry to hear that. I completely understand that's really frustrating, and I don't want to see you go. Before I process anything can you tell me a bit more about what's been happening?",
+      "t": 20
+    },
+    {
+      "speaker": "customer",
+      "text": "The whole checkout flow is just ridiculous. It crashes mid-payment every time. I've reported it twice already and nothing has changed. I feel completely ignored as a customer.",
+      "t": 34
+    },
+    {
+      "speaker": "agent",
+      "text": "I completely understand your frustration and you are absolutely right that this should have been resolved by now. That is not the experience we want for you. I've looked at your account and I can see your two previous reports. I'd like to offer you three months of our service completely free of charge while our engineering team works on a fix. I'm also escalating your feedback directly to the product team so they can prioritise this issue.",
+      "t": 52
+    },
+    {
+      "speaker": "customer",
+      "text": "Three months free? Well, that's something I suppose.",
+      "t": 70
+    },
+    {
+      "speaker": "agent",
+      "text": "I've applied the three months of complimentary access to your account right now. You'll receive a confirmation email shortly. And I'm personally logging this as high priority feedback so the right people see it.",
+      "t": 76
+    },
+    {
+      "speaker": "customer",
+      "text": "Alright. I'll give it another shot. Thank you for actually doing something about it.",
+      "t": 90
+    },
+    {
+      "speaker": "agent",
+      "text": "Thank you so much for giving us the chance to make it right. We genuinely value you as a customer. Is there anything else I can help with today?",
+      "t": 96
+    }
+  ]
+}

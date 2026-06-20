@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call Quality Review Tool — Architecture</title>
+  <style>
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111118;
+      --card:      #16161f;
+      --card2:     #1c1c28;
+      --border:    #2a2a3a;
+      --border2:   #353548;
+      --text:      #f0f0f8;
+      --muted:     #9090a8;
+      --hint:      #555568;
+      --yellow:    #ffd700;
+      --yellow-dim:#ffd70022;
+      --red:       #ff4d4d;
+      --red-dim:   #ff4d4d22;
+      --green:     #44d48a;
+      --green-dim: #44d48a22;
+      --orange:    #ff8c42;
+      --orange-dim:#ff8c4222;
+      --blue:      #4d9eff;
+      --blue-dim:  #4d9eff22;
+      --violet:    #a78bfa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 32px 40px 48px;
+    }
+
+    /* ── Title bar ── */
+    .titlebar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .dots { display: flex; gap: 6px; }
+    .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+    .filename {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--hint);
+      margin-left: 4px;
+    }
+
+    .diagram-title {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .diagram-title h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--yellow);
+    }
+    .diagram-title p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    .tech-chips {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+    .chip.node  { color: #68a063; border-color: #68a06340; background: #68a06312; }
+    .chip.react { color: #61dafb; border-color: #61dafb40; background: #61dafb12; }
+    .chip.vite  { color: #bd34fe; border-color: #bd34fe40; background: #bd34fe12; }
+    .chip.express { color: var(--orange); border-color: #ff8c4240; background: #ff8c4212; }
+    .chip.mem   { color: var(--yellow); border-color: #ffd70040; background: #ffd70012; }
+
+    /* ── Main wrapper ── */
+    .arch-root {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ── Layer labels ── */
+    .layer-wrap {
+      position: relative;
+    }
+    .layer-tag {
+      position: absolute;
+      top: -11px;
+      left: 20px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 2px 10px;
+      border-radius: 4px;
+      z-index: 10;
+    }
+
+    /* ── FRONTEND LAYER ── */
+    .frontend-layer {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+    }
+    .frontend-layer .layer-tag {
+      background: #61dafb18;
+      color: #61dafb;
+      border: 1px solid #61dafb30;
+    }
+
+    .frontend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .fe-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .fe-panel h3 {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .fe-panel h3 span {
+      color: #61dafb;
+      margin-right: 6px;
+    }
+
+    .component-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .component-row:last-child { margin-bottom: 0; }
+
+    .comp {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+    }
+    .comp.yellow { border-color: #ffd70030; background: #ffd70010; color: var(--yellow); }
+    .comp.blue   { border-color: #4d9eff30; background: #4d9eff10; color: var(--blue); }
+    .comp.violet { border-color: #a78bfa30; background: #a78bfa10; color: var(--violet); }
+    .comp.green  { border-color: #44d48a30; background: #44d48a10; color: var(--green); }
+
+    .comp-note {
+      font-size: 10px;
+      color: var(--hint);
+      margin-top: 2px;
+      padding-left: 2px;
+    }
+
+    /* ── HTTP BRIDGE ── */
+    .http-bridge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 6px 0;
+      position: relative;
+    }
+
+    .http-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+    }
+    .http-col.write { align-items: flex-end; padding-right: 24px; }
+    .http-col.read  { align-items: flex-start; padding-left: 24px; }
+
+    .http-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 180px;
+    }
+    .http-label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+    }
+    .http-line {
+      width: 2px;
+      height: 36px;
+      background: linear-gradient(to bottom, #ffd70060, #ffd70010);
+      position: relative;
+    }
+    .http-line.up {
+      background: linear-gradient(to top, #4d9eff60, #4d9eff10);
+    }
+    .http-line::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #ffd70060;
+    }
+    .http-line.up::after {
+      bottom: auto;
+      top: -6px;
+      border-top: none;
+      border-bottom: 6px solid #4d9eff60;
+    }
+
+    .endpoint-pill {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .endpoint-pill .method {
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .ep-post   { background: #ffd70015; border: 1px solid #ffd70035; color: var(--yellow); }
+    .ep-get    { background: #44d48a15; border: 1px solid #44d48a35; color: var(--green); }
+    .ep-delete { background: #ff4d4d15; border: 1px solid #ff4d4d35; color: var(--red); }
+
+    /* ── BACKEND LAYER ── */
+    .backend-layer {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 28px 24px 24px;
+    }
+    .backend-layer .layer-tag {
+      background: #ff8c4218;
+      color: var(--orange);
+      border: 1px solid #ff8c4230;
+    }
+
+    /* Routes bar */
+    .routes-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 16px;
+    }
+    .routes-bar h4 {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 10px;
+    }
+    .routes-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Processing columns */
+    .processing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .proc-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .proc-card h4 {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .proc-card .proc-file {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 9px;
+      color: var(--hint);
+      margin-bottom: 12px;
+    }
+    .proc-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .proc-card ul li {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .moment-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .proc-tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    /* Storage bar */
+    .storage-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+    }
+    .storage-bar h4 {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 10px;
+    }
+    .storage-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .storage-fns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .fn-pill {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 10px;
+      color: var(--violet);
+      background: #a78bfa12;
+      border: 1px solid #a78bfa25;
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+    .swap-note {
+      font-size: 10px;
+      color: var(--hint);
+      font-style: italic;
+      max-width: 340px;
+    }
+    .swap-note strong { color: var(--yellow); font-style: normal; }
+
+    /* ── LEGEND ── */
+    .legend {
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0 32px;
+      flex-wrap: wrap;
+      padding: 16px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .legend-title {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+      width: 100%;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .legend-swatch {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .legend-priority {
+      font-size: 9px;
+      color: var(--hint);
+      font-weight: 400;
+    }
+
+    /* ── FLOW ANNOTATION ── */
+    .flow-strip {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .flow-strip h4 {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 14px;
+    }
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 100px;
+    }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--yellow-dim);
+      border: 1px solid var(--yellow);
+      color: var(--yellow);
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+    }
+    .step-sub {
+      font-size: 9px;
+      color: var(--hint);
+      text-align: center;
+    }
+    .flow-arrow {
+      color: var(--border2);
+      font-size: 18px;
+      padding: 0 4px;
+      flex-shrink: 0;
+      margin-bottom: 22px;
+    }
+
+    /* Divider arrows between layers */
+    .layer-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 44px;
+      position: relative;
+    }
+    .layer-arrow svg {
+      position: absolute;
+    }
+
+    @keyframes dash-down {
+      to { stroke-dashoffset: -20; }
+    }
+    @keyframes dash-up {
+      to { stroke-dashoffset: 20; }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Print */
+    @media print {
+      body { padding: 16px; background: #fff !important; color: #000 !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="titlebar">
+  <div class="dots">
+    <span class="dot r"></span>
+    <span class="dot y"></span>
+    <span class="dot g"></span>
+  </div>
+  <span class="filename">architecture.html</span>
+</div>
+
+<div class="diagram-title">
+  <h1>Call Quality Review Tool</h1>
+  <p>System Architecture — Observe.AI Challenge + Wavvy Enhancements</p>
+  <div class="tech-chips">
+    <span class="chip react">React 18</span>
+    <span class="chip vite">Vite</span>
+    <span class="chip node">Node.js</span>
+    <span class="chip express">Express 4</span>
+    <span class="chip mem">In-Memory Store</span>
+  </div>
+</div>
+
+<div class="arch-root">
+
+  <!-- ══════════════════════════════════════════════════
+       FRONTEND LAYER
+  ══════════════════════════════════════════════════ -->
+  <div class="layer-wrap" style="margin-bottom: 0;">
+    <span class="layer-tag">Browser — React SPA · Vite dev server · Port 5173</span>
+    <div class="frontend-layer">
+      <div class="frontend-grid">
+
+        <!-- List View -->
+        <div class="fe-panel">
+          <h3><span>⊞</span>Call List View <code style="font-size:9px; color: var(--hint); font-weight:400;">/</code></h3>
+
+          <div class="component-row">
+            <span class="comp yellow">TranscriptUpload</span>
+            <span class="comp">CallList</span>
+          </div>
+          <p class="comp-note">JSON drag-drop · client-side validation · duplicate guard</p>
+
+          <div class="component-row" style="margin-top: 10px;">
+            <span class="comp blue">Agent filter</span>
+            <span class="comp blue">Sentiment filter</span>
+            <span class="comp blue">Sort controls</span>
+          </div>
+          <p class="comp-note">Filter by agent name · sentiment arc segment · sort by 5 fields</p>
+
+          <div class="component-row" style="margin-top: 10px;">
+            <span class="comp violet">Metrics bar</span>
+          </div>
+          <p class="comp-note">Total calls · avg empathy · escalations · critical ratio</p>
+        </div>
+
+        <!-- Detail View -->
+        <div class="fe-panel">
+          <h3><span>◫</span>Call Detail View <code style="font-size:9px; color: var(--hint); font-weight:400;">/calls/:id</code></h3>
+
+          <div class="component-row">
+            <span class="comp yellow">CallHeader</span>
+            <span class="comp">MomentTimeline</span>
+          </div>
+          <p class="comp-note">Agent · duration · moment count · escalation badge · sentiment arc</p>
+
+          <div class="component-row" style="margin-top: 10px;">
+            <span class="comp violet">ConversationWaveform</span>
+          </div>
+          <p class="comp-note">TTS playback · speed control · waveform bars by speaker · click-to-jump</p>
+
+          <div class="component-row" style="margin-top: 10px;">
+            <span class="comp">TranscriptView</span>
+            <span class="comp green">SummaryPanel</span>
+            <span class="comp green">MomentsSidebar</span>
+          </div>
+          <p class="comp-note">Annotated turns · colour-coded borders · talk ratio · coaching note · priority list</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       HTTP BRIDGE
+  ══════════════════════════════════════════════════ -->
+  <div style="padding: 8px 0; display: flex; align-items: center; justify-content: center; gap: 40px;">
+
+    <!-- Write (POST) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+      <span class="endpoint-pill ep-post">
+        <span class="method">POST</span> /calls
+      </span>
+      <svg width="2" height="40" style="overflow:visible">
+        <line x1="1" y1="0" x2="1" y2="38"
+          stroke="#ffd700" stroke-width="1.5" stroke-dasharray="5,3"
+          style="animation: dash-down 0.8s linear infinite;" />
+        <polygon points="1,40 -4,32 6,32" fill="#ffd700" opacity="0.7" />
+      </svg>
+      <span style="font-size:9px; color:var(--hint); letter-spacing:0.8px; text-transform:uppercase; font-weight:700;">Ingest</span>
+    </div>
+
+    <!-- Separator label -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
+      <span style="font-size:9px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--hint);">HTTP</span>
+      <span style="font-size:8px; color:var(--hint); opacity:0.6;">Vite proxy → :3001</span>
+    </div>
+
+    <!-- Read (GET × 3) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+      <svg width="2" height="40" style="overflow:visible;">
+        <line x1="1" y1="40" x2="1" y2="2"
+          stroke="#44d48a" stroke-width="1.5" stroke-dasharray="5,3"
+          style="animation: dash-up 0.8s linear infinite;" />
+        <polygon points="1,0 -4,8 6,8" fill="#44d48a" opacity="0.7" />
+      </svg>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls</span>
+        <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls/:id</span>
+        <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls/:id/moments</span>
+        <span class="endpoint-pill ep-delete"><span class="method">DEL</span> /calls/:id</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       BACKEND LAYER
+  ══════════════════════════════════════════════════ -->
+  <div class="layer-wrap">
+    <span class="layer-tag">Server — Node.js · Express 4 · Port 3001</span>
+    <div class="backend-layer">
+
+      <!-- Routes bar -->
+      <div class="routes-bar">
+        <h4>Express Router — calls.js</h4>
+        <div class="routes-row">
+          <span class="endpoint-pill ep-post"><span class="method">POST</span> /calls</span>
+          <span style="color:var(--hint); font-size:11px;">→ validate · detect · summarise · store</span>
+          <span style="flex:1;"></span>
+          <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls</span>
+          <span style="color:var(--hint); font-size:11px;">?agent= filter</span>
+          <span style="flex:1;"></span>
+          <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls/:id</span>
+          <span style="color:var(--hint); font-size:11px;">annotatedTurns + summary</span>
+          <span style="flex:1;"></span>
+          <span class="endpoint-pill ep-get"><span class="method">GET</span> /calls/:id/moments</span>
+          <span style="flex:1;"></span>
+          <span class="endpoint-pill ep-delete"><span class="method">DELETE</span> /calls/:id</span>
+        </div>
+      </div>
+
+      <!-- Three processing modules -->
+      <div class="processing-grid">
+
+        <!-- detectMoments -->
+        <div class="proc-card" style="border-color: #4d9eff30;">
+          <h4>detectMoments</h4>
+          <div class="proc-file">detectMoments.js · pure function</div>
+          <ul>
+            <li>
+              <span class="moment-dot" style="background: var(--red);"></span>
+              <span><strong style="color:var(--red);">Escalation</strong> — cancel, refund, manager, lawsuit, ridiculous, unacceptable</span>
+            </li>
+            <li>
+              <span class="moment-dot" style="background: var(--green);"></span>
+              <span><strong style="color:var(--green);">Empathy</strong> — /i.*understand/i, /i.?m sorry/i, I apologise, I can see why</span>
+            </li>
+            <li>
+              <span class="moment-dot" style="background: var(--orange);"></span>
+              <span><strong style="color:var(--orange);">Dead Air</strong> — gap between turns &gt; 15 s</span>
+            </li>
+            <li>
+              <span class="moment-dot" style="background: var(--blue);"></span>
+              <span><strong style="color:var(--blue);">Long Monologue</strong> — turn word count &gt; 50</span>
+            </li>
+          </ul>
+          <span class="proc-tag" style="background:#4d9eff15; color:var(--blue); border:1px solid #4d9eff30;">
+            turns[ ] → moments[ ] · sorted by priority desc
+          </span>
+        </div>
+
+        <!-- summary.js -->
+        <div class="proc-card" style="border-color: #44d48a30;">
+          <h4>computeSummary</h4>
+          <div class="proc-file">summary.js · calls coaching.js</div>
+          <ul>
+            <li><span class="moment-dot" style="background:var(--muted);"></span><span><strong>talkRatio</strong> — agent vs customer turn %</span></li>
+            <li><span class="moment-dot" style="background:var(--muted);"></span><span><strong>escalationCount</strong> — filtered moments</span></li>
+            <li><span class="moment-dot" style="background:var(--muted);"></span><span><strong>empathyScore</strong> — empathy / (empathy + escalation)</span></li>
+            <li><span class="moment-dot" style="background:var(--muted);"></span><span><strong>sentimentArc</strong> — first-half vs second-half escalations → improved / declined / neutral</span></li>
+            <li><span class="moment-dot" style="background:var(--muted);"></span><span><strong>momentDensity</strong> — total moments / duration (min)</span></li>
+            <li><span class="moment-dot" style="background:var(--yellow);"></span><span><strong style="color:var(--yellow);">coachingNote</strong> — rule-based text</span></li>
+          </ul>
+        </div>
+
+        <!-- coaching.js -->
+        <div class="proc-card" style="border-color: #ffd70030;">
+          <h4>generateCoachingNote</h4>
+          <div class="proc-file">coaching.js · deterministic rules</div>
+          <ul>
+            <li><span class="moment-dot" style="background:var(--red);"></span><span>Escalation + no empathy → acknowledge earlier</span></li>
+            <li><span class="moment-dot" style="background:var(--red);"></span><span>Empathy after escalation → still too late</span></li>
+            <li><span class="moment-dot" style="background:var(--orange);"></span><span>≥ 2 dead-air periods → review hold workflow</span></li>
+            <li><span class="moment-dot" style="background:var(--orange);"></span><span>1 dead-air → avoid extended silences</span></li>
+            <li><span class="moment-dot" style="background:var(--blue);"></span><span>Long monologue (customer) → clarify earlier</span></li>
+            <li><span class="moment-dot" style="background:var(--blue);"></span><span>Long monologue (agent) → keep concise</span></li>
+            <li><span class="moment-dot" style="background:var(--green);"></span><span>Empathy, no escalation → strong empathy</span></li>
+          </ul>
+          <span class="proc-tag" style="background:#ffd70015; color:var(--yellow); border:1px solid #ffd70030;">
+            No AI / LLM — explainable &amp; auditable
+          </span>
+        </div>
+
+      </div>
+
+      <!-- Storage bar -->
+      <div class="storage-bar">
+        <h4>Persistence — storage.js</h4>
+        <div class="storage-inner">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px;">
+              In-Memory <code style="font-size:10px; color:var(--violet);">Map&lt;callId, CallRecord&gt;</code>
+            </div>
+            <div class="storage-fns">
+              <span class="fn-pill">saveCall(id, data)</span>
+              <span class="fn-pill">getCall(id)</span>
+              <span class="fn-pill">getAllCalls()</span>
+              <span class="fn-pill">callExists(id)</span>
+              <span class="fn-pill">deleteCall(id)</span>
+            </div>
+          </div>
+          <div class="swap-note">
+            <strong>Repository pattern:</strong> routes, detection, and summary have zero knowledge of how data is stored.
+            Swapping to PostgreSQL = replace this one file only.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       INGESTION FLOW
+  ══════════════════════════════════════════════════ -->
+  <div class="flow-strip">
+    <h4>Transcript Ingestion Flow — POST /calls</h4>
+    <div class="flow-steps">
+
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-label">Upload JSON</div>
+        <div class="step-sub">Drag-drop or file picker<br/>Client validates schema</div>
+      </div>
+
+      <div class="flow-arrow">›</div>
+
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-label">Route Validation</div>
+        <div class="step-sub">callId · agentName · duration<br/>turns[] shape check</div>
+      </div>
+
+      <div class="flow-arrow">›</div>
+
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-label">detectMoments</div>
+        <div class="step-sub">Regex + gap + word-count<br/>Pure function, no I/O</div>
+      </div>
+
+      <div class="flow-arrow">›</div>
+
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-label">computeSummary</div>
+        <div class="step-sub">Metrics + coaching note<br/>Computed once at ingest</div>
+      </div>
+
+      <div class="flow-arrow">›</div>
+
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-label">saveCall</div>
+        <div class="step-sub">Denormalised record<br/>O(1) reads thereafter</div>
+      </div>
+
+      <div class="flow-arrow">›</div>
+
+      <div class="flow-step">
+        <div class="step-num">6</div>
+        <div class="step-label">Return &amp; Navigate</div>
+        <div class="step-sub">{ callId, momentCount }<br/>UI redirects to detail</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       LEGEND
+  ══════════════════════════════════════════════════ -->
+  <div class="legend">
+    <div class="legend-title">Moment Type Legend — Priority Order</div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:var(--red);"></span>
+      Escalation
+      <span class="legend-priority">priority 4 · customer speaker</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:var(--orange);"></span>
+      Dead Air
+      <span class="legend-priority">priority 3 · gap &gt; 15 s</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:var(--blue);"></span>
+      Long Monologue
+      <span class="legend-priority">priority 2 · &gt; 50 words</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:var(--green);"></span>
+      Empathy
+      <span class="legend-priority">priority 1 · agent speaker</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

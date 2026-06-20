@@ -1,0 +1,42 @@
+{
+  "callId": "c003",
+  "agentName": "Aiden",
+  "duration": 300,
+  "turns": [
+    {
+      "speaker": "agent",
+      "text": "Thanks for calling technical support, this is Aiden. How can I help you today?",
+      "t": 0
+    },
+    {
+      "speaker": "customer",
+      "text": "My internet has been completely down for two days and I work from home. This is absolutely unacceptable. I've tried resetting the router three times and nothing works.",
+      "t": 6
+    },
+    {
+      "speaker": "agent",
+      "text": "I completely understand how disruptive that must be when you rely on the connection for work. Let me run a full diagnostic on your line right now.",
+      "t": 14
+    },
+    {
+      "speaker": "customer",
+      "text": "How long is this going to take? I have meetings I'm missing.",
+      "t": 22
+    },
+    {
+      "speaker": "agent",
+      "text": "I apologise for the hold time while I was running the diagnostic. I can see there is a signal outage affecting your local area node and our technical team is already on site working to resolve it. Based on the current repair progress your service should be restored within the next two to three hours. I've added a service credit to your account for the disruption and I'll arrange an SMS notification the moment your connection comes back online.",
+      "t": 56
+    },
+    {
+      "speaker": "customer",
+      "text": "Two hours is a long time. Can you have a manager review my case and make sure this is being prioritised?",
+      "t": 72
+    },
+    {
+      "speaker": "agent",
+      "text": "Absolutely. I've escalated your account to priority status and a senior technician has been assigned. You'll also receive a direct callback once the line is restored. I'm sorry again for the impact on your workday.",
+      "t": 80
+    }
+  ]
+}

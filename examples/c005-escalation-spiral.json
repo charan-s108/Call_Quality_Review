@@ -1,0 +1,62 @@
+{
+  "callId": "c005",
+  "agentName": "Derek",
+  "duration": 210,
+  "turns": [
+    {
+      "speaker": "agent",
+      "text": "Thanks for calling support, this is Derek. How can I help?",
+      "t": 0
+    },
+    {
+      "speaker": "customer",
+      "text": "Hi, I placed an order three weeks ago and it still hasn't arrived. I was told it would be here in three to five days.",
+      "t": 6
+    },
+    {
+      "speaker": "agent",
+      "text": "Let me check on that for you. Can I get your order number please?",
+      "t": 13
+    },
+    {
+      "speaker": "customer",
+      "text": "It's order number 88421. Please hurry, I need this urgently.",
+      "t": 18
+    },
+    {
+      "speaker": "agent",
+      "text": "Thank you, one moment while I look into that for you.",
+      "t": 22
+    },
+    {
+      "speaker": "customer",
+      "text": "Hello? Is anyone still there?",
+      "t": 55
+    },
+    {
+      "speaker": "agent",
+      "text": "Yes, sorry for the wait. So I can see your order has been delayed due to a warehouse processing issue. It looks like it should ship within the next five to seven business days.",
+      "t": 59
+    },
+    {
+      "speaker": "customer",
+      "text": "Five to seven MORE days?! This is completely unacceptable. I needed this last week. I want a refund and I want to know who your manager is right now.",
+      "t": 68
+    },
+    {
+      "speaker": "agent",
+      "text": "I understand this is frustrating. Our warehouse team is working through a backlog at the moment.",
+      "t": 80
+    },
+    {
+      "speaker": "customer",
+      "text": "No, you clearly do not understand at all. I have been waiting three weeks for something that was supposed to take five days. I want to speak to a manager immediately and I am going to file a lawsuit against your company if this shipment does not arrive by end of week. I will also be disputing this charge with my bank and leaving reviews everywhere I can find. This is the most incompetent customer service I have ever dealt with in my entire life.",
+      "t": 86
+    },
+    {
+      "speaker": "agent",
+      "text": "I can transfer you to a supervisor right now. Please hold.",
+      "t": 102
+    }
+  ]
+}
