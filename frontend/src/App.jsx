@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import CallList from './components/CallList.jsx';
 import CallDetail from './components/CallDetail.jsx';
 import ObserveAILogo from './assets/ObserveAILogo.jsx';
@@ -20,6 +21,23 @@ export default function App() {
           <Route path="/calls/:id" element={<CallDetail />} />
         </Routes>
       </main>
+
+      <Toaster
+        theme="dark"
+        position="top-right"
+        richColors
+        expand
+        toastOptions={{
+          duration: 7000,
+          style: {
+            background: '#16161f',
+            border: '1px solid #2a2a3a',
+            color: '#f0f0f8',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '13px',
+          },
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileJson, Download, Sparkles, Play, AlertCircle } from 'lucide-react';
+import { Upload, FileJson, Download, Play } from 'lucide-react';
+import { toast } from 'sonner';
 import { ingestCall } from '@/api.js';
 import { cn } from '@/lib/utils.js';
 
@@ -30,19 +31,31 @@ function downloadExample() {
 export default function TranscriptUpload({ onSuccess }) {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+
+  function fireErrorToast(e) {
+    if (e.isValidation) {
+      toast.error(`Invalid field — ${e.field}`, {
+        description: e.fix
+          ? `${e.detail}\n\nExpected: ${e.fix}`
+          : e.detail,
+      });
+    } else {
+      toast.error('Upload Failed', { description: e.message });
+    }
+  }
 
   async function processFile(file) {
     if (!file) return;
     if (!file.name.endsWith('.json')) {
-      setError('Only .json files are supported.');
+      toast.error('Unsupported file type', {
+        description: 'Only .json files are accepted. Drag in a valid transcript JSON.',
+      });
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     try {
       const text = await file.text();
@@ -50,52 +63,76 @@ export default function TranscriptUpload({ onSuccess }) {
       try {
         data = JSON.parse(text);
       } catch {
-        throw new Error('Invalid JSON — could not parse the file.');
+        throw new Error('Could not parse the file — make sure it is valid JSON.');
       }
 
       validateData(data);
 
       const result = await ingestCall(data);
+      toast.success('Transcript ingested', {
+        description: `${result.momentCount} moment${result.momentCount !== 1 ? 's' : ''} detected for call ${result.callId}.`,
+      });
       onSuccess?.();
       navigate(`/calls/${result.callId}`);
     } catch (e) {
-      setError(e.message);
+      fireErrorToast(e);
       setLoading(false);
     }
   }
 
   function validateData(data) {
-    if (!data.callId || typeof data.callId !== 'string') {
-      throw new Error('Missing or invalid field: callId (string)');
+    if (!data.callId) {
+      throw new ValidationError('callId', 'Field is missing.', '"callId": "c001"');
     }
-    if (!data.agentName || typeof data.agentName !== 'string') {
-      throw new Error('Missing or invalid field: agentName (string)');
+    if (typeof data.callId !== 'string') {
+      throw new ValidationError('callId', `Expected a string, got ${typeof data.callId}.`, '"callId": "c001"');
     }
-    if (data.duration == null || typeof data.duration !== 'number') {
-      throw new Error('Missing or invalid field: duration (number, seconds)');
+    if (!data.agentName) {
+      throw new ValidationError('agentName', 'Field is missing.', '"agentName": "Priya"');
+    }
+    if (typeof data.agentName !== 'string') {
+      throw new ValidationError('agentName', `Expected a string, got ${typeof data.agentName}.`, '"agentName": "Priya"');
+    }
+    if (data.duration == null) {
+      throw new ValidationError('duration', 'Field is missing.', '"duration": 240');
+    }
+    if (typeof data.duration !== 'number' || isNaN(data.duration)) {
+      throw new ValidationError(
+        'duration',
+        `Expected a number (seconds), but received ${typeof data.duration} — ${JSON.stringify(data.duration)}. Remove the quotes around the value.`,
+        '"duration": 240'
+      );
     }
     if (!Array.isArray(data.turns)) {
-      throw new Error('Missing or invalid field: turns (array)');
+      throw new ValidationError('turns', `Expected an array, got ${typeof data.turns}.`, '"turns": [ { "speaker": "agent", "text": "...", "t": 0 } ]');
+    }
+  }
+
+  class ValidationError extends Error {
+    constructor(field, detail, fix) {
+      super(`${field}: ${detail}`);
+      this.isValidation = true;
+      this.field = field;
+      this.detail = detail;
+      this.fix = fix;
     }
   }
 
   async function handleTryDemo() {
     setLoading(true);
-    setError(null);
     try {
       // Ingest the sample example
       const result = await ingestCall(EXAMPLE_TRANSCRIPT);
       onSuccess?.();
       navigate(`/calls/${result.callId}`);
     } catch (e) {
-      // If it exists, navigate anyway
       if (e.message.includes('already exists') || e.message.includes('400')) {
         onSuccess?.();
         navigate(`/calls/${EXAMPLE_TRANSCRIPT.callId}`);
       } else {
-        setError(e.message);
+        toast.error('Demo failed', { description: e.message });
+        setLoading(false);
       }
-      setLoading(false);
     }
   }
 
@@ -111,24 +148,7 @@ export default function TranscriptUpload({ onSuccess }) {
   }
 
   return (
-    <div className="space-y-4 bg-w-card/30 backdrop-blur-md border border-w-border/60 rounded-xl p-5 shadow-2xl">
-      {/* Title block */}
-      <div className="flex items-center justify-between pb-3 border-b border-w-border/40">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-w-muted flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-w-yellow animate-pulse" />
-          Ingest Conversation
-        </h3>
-        <button
-          onClick={handleTryDemo}
-          type="button"
-          disabled={loading}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-w-yellow/10 text-w-yellow hover:bg-w-yellow hover:text-w-bg border border-w-yellow/30 hover:border-transparent rounded transition-all duration-200"
-        >
-          <Play className="w-3 h-3 fill-current" />
-          Try Demo Call
-        </button>
-      </div>
-
+    <div className="space-y-3">
       {/* Drop zone */}
       <div
         onClick={() => !loading && inputRef.current?.click()}
@@ -136,88 +156,48 @@ export default function TranscriptUpload({ onSuccess }) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cn(
-          'relative border-2 border-dashed rounded-xl px-6 py-9 text-center transition-all duration-200',
+          'border-2 border-dashed rounded-xl px-6 py-10 text-center transition-all duration-200',
           dragging
-            ? 'border-w-yellow bg-w-yellow/5 scale-[1.01] shadow-[0_0_15px_rgba(244,247,61,0.07)]'
-            : 'border-w-border/80 hover:border-w-yellow/40 hover:bg-white/[0.015]',
-          loading ? 'opacity-60 pointer-events-none cursor-wait' : 'cursor-pointer'
+            ? 'border-w-yellow bg-w-yellow/5 scale-[1.01]'
+            : 'border-w-border/60 hover:border-w-yellow/40 hover:bg-white/[0.015]',
+          loading ? 'opacity-50 pointer-events-none cursor-wait' : 'cursor-pointer'
         )}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={onInputChange}
-        />
+        <input ref={inputRef} type="file" accept=".json,application/json" className="hidden" onChange={onInputChange} />
 
         {loading ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-7 h-7 border-2 border-w-yellow/25 border-t-w-yellow rounded-full animate-spin" />
-            <p className="text-w-muted text-sm font-medium">Analyzing conversation structure...</p>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-6 h-6 border-2 border-w-yellow/25 border-t-w-yellow rounded-full animate-spin" />
+            <p className="text-w-hint text-xs">Analyzing…</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className={cn(
-              'w-12 h-12 rounded-xl flex items-center justify-center mb-1 transition-all duration-300 shadow-md',
-              dragging ? 'bg-w-yellow/20 text-w-yellow' : 'bg-w-bg-deep text-w-hint border border-w-border/60'
-            )}>
-              {dragging
-                ? <FileJson className="w-6 h-6" />
-                : <Upload className="w-6 h-6" />
-              }
-            </div>
-            <p className="text-w-text text-sm font-semibold tracking-tight">
-              {dragging ? 'Release to upload' : 'Upload Transcript JSON'}
+          <div className="flex flex-col items-center gap-1.5">
+            {dragging
+              ? <FileJson className="w-6 h-6 text-w-yellow mb-1" />
+              : <Upload className="w-6 h-6 text-w-hint mb-1" />
+            }
+            <p className="text-w-text text-sm font-semibold">
+              {dragging ? 'Release to upload' : 'Drop transcript JSON here'}
             </p>
             <p className="text-w-hint text-xs">
-              Drag & drop files or <span className="text-w-yellow font-medium hover:underline underline-offset-2">browse computer</span>
+              or <span className="text-w-yellow hover:underline underline-offset-2 cursor-pointer">browse</span>
             </p>
           </div>
         )}
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-w-red/20 bg-w-red/5 px-3 py-2.5 text-xs text-w-red">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Schema with mock code editor style */}
-      <div className="rounded-lg bg-[#0d0c15] border border-w-border overflow-hidden shadow-inner">
-        <div className="flex items-center justify-between px-3 py-1.5 bg-[#12111d] border-b border-w-border/40 text-[10px] text-w-hint font-mono">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-w-red/50 inline-block" />
-            <span className="w-2.5 h-2.5 rounded-full bg-w-orange/50 inline-block" />
-            <span className="w-2.5 h-2.5 rounded-full bg-w-green/50 inline-block" />
-            <span className="ml-1 select-none">transcript-schema.json</span>
-          </div>
-          <span>JSON</span>
-        </div>
-        <pre className="p-3 text-[11px] leading-relaxed font-mono overflow-x-auto text-[#9e9daf] whitespace-pre select-all">
-          <span className="text-w-violet">{"{"}</span>{`
-  `}<span className="text-w-red">"callId"</span>:    <span className="text-w-green">"c001"</span>,
-  <span className="text-w-red">"agentName"</span>: <span className="text-w-green">"Priya"</span>,
-  <span className="text-w-red">"duration"</span>:  <span className="text-w-orange">240</span>,
-  <span className="text-w-red">"turns"</span>: <span className="text-w-violet">[</span>
-    <span className="text-w-violet">{"{"}</span> <span className="text-w-red">"speaker"</span>: <span className="text-w-green">"agent"</span>, <span className="text-w-red">"text"</span>: <span className="text-w-green">"…"</span>, <span className="text-w-red">"t"</span>: <span className="text-w-orange">0</span> <span className="text-w-violet">{"}"}</span>
-  <span className="text-w-violet">]</span>
-<span className="text-w-violet">{"}"}</span>
-        </pre>
-      </div>
-
-      <div className="flex items-center justify-between pt-1">
-        <button
-          type="button"
-          onClick={downloadExample}
-          className="flex items-center gap-1.5 text-xs text-w-hint hover:text-w-yellow transition-all duration-150"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Download Sample JSON
+      {/* Actions */}
+      <div className="flex items-center justify-between px-1">
+        <button type="button" onClick={handleTryDemo} disabled={loading}
+          className="flex items-center gap-1 text-xs text-w-hint hover:text-w-yellow transition-colors disabled:opacity-40">
+          <Play className="w-3 h-3 fill-current" />
+          Try demo call
         </button>
-        <span className="text-[10px] text-w-hint/60 font-mono">UTF-8 Encoded</span>
+        <button type="button" onClick={downloadExample}
+          className="flex items-center gap-1 text-xs text-w-hint hover:text-w-yellow transition-colors">
+          <Download className="w-3 h-3" />
+          Download sample
+        </button>
       </div>
     </div>
   );

@@ -46,8 +46,10 @@ export default function TranscriptView({ annotatedTurns = [], activeMomentFilter
   if (safeTurns.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-w-hint bg-w-card/5 border border-dashed border-w-border m-6 rounded-xl">
-        <p className="font-semibold text-w-muted text-sm">No transcript data found</p>
-        <p className="text-xs text-w-hint mt-1">Ingest a valid JSON to see turns here</p>
+        <p className="font-semibold text-w-muted text-sm">This transcript has no turns</p>
+        <p className="text-xs text-w-hint mt-1 max-w-[300px] text-center">
+          The call was ingested with an empty <code className="font-mono text-w-yellow/70">turns</code> array — add speaker turns to see the annotated transcript view.
+        </p>
       </div>
     );
   }

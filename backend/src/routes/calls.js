@@ -5,6 +5,45 @@ import { computeSummary } from '../summary.js';
 
 const router = Router();
 
+// Fill in missing or invalid `t` values via linear interpolation between known neighbours.
+// Turns with a valid `t` are untouched; turns without one get a timestamp inferred from
+// the closest preceding and following turns that do have one.
+function inferTimestamps(turns) {
+  const result = turns.map(t => ({ ...t }));
+
+  const isValid = t => t != null && typeof t === 'number' && !isNaN(t) && isFinite(t) && t >= 0;
+
+  for (let i = 0; i < result.length; i++) {
+    if (isValid(result[i].t)) continue;
+
+    // Nearest preceding known t
+    let prevIdx = -1, prevT = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      if (isValid(result[j].t)) { prevIdx = j; prevT = result[j].t; break; }
+    }
+
+    // Nearest following known t
+    let nextIdx = -1, nextT = prevT;
+    for (let j = i + 1; j < result.length; j++) {
+      if (isValid(result[j].t)) { nextIdx = j; nextT = result[j].t; break; }
+    }
+
+    if (nextIdx === -1) {
+      // Nothing after — hold at prev
+      result[i].t = prevT;
+    } else if (prevIdx === -1) {
+      // Nothing before — split the gap to the first known t
+      result[i].t = Math.round(nextT / 2);
+    } else {
+      // Linearly interpolate between the two known anchors
+      const span = nextIdx - prevIdx;
+      result[i].t = Math.round(prevT + ((nextT - prevT) * (i - prevIdx)) / span);
+    }
+  }
+
+  return result;
+}
+
 // POST /calls — ingest transcript, run detection + summary, store and return callId + momentCount
 router.post('/calls', (req, res) => {
   const { callId, agentName, duration, turns } = req.body ?? {};
@@ -37,19 +76,22 @@ router.post('/calls', (req, res) => {
     if (typeof turn.text !== 'string') {
       return res.status(400).json({ error: `turn at index ${i} must have a text string` });
     }
-    if (turn.t == null || typeof turn.t !== 'number' || isNaN(turn.t) || !isFinite(turn.t) || turn.t < 0) {
-      return res.status(400).json({ error: `turn at index ${i} must have a non-negative finite timestamp 't' (seconds)` });
+    // t is optional — missing values are inferred below via interpolation
+    if (turn.t != null && (typeof turn.t !== 'number' || isNaN(turn.t) || !isFinite(turn.t) || turn.t < 0)) {
+      return res.status(400).json({ error: `turn at index ${i}: 't' must be a non-negative number when provided` });
     }
   }
 
-  const moments = detectMoments(turns);
-  const summary = computeSummary(turns, moments, duration);
+  const resolvedTurns = inferTimestamps(turns);
+
+  const moments = detectMoments(resolvedTurns);
+  const summary = computeSummary(resolvedTurns, moments, duration);
 
   const callData = {
     callId,
     agentName,
     duration,
-    turns,
+    turns: resolvedTurns,
     moments,
     summary,
     createdAt: new Date().toISOString(),
